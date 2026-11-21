@@ -1,22 +1,30 @@
 /**
- * Provider directory source.
+ * Provider directory source. The live read is the public Google Sheet CSV.
+ * Apps Script is not on the request path.
  *
- * The site reads the Google Sheet on each visit. To switch the fetch to a
- * deployed Apps Script web app, paste its URL into DIRECTORY_SCRIPT_URL.
- * Leave it empty to keep using the sheet CSV export (sheet must stay
- * viewable by anyone with the link).
+ * Hard stop for this design: 5,000 published rows, a 5 MB CSV, or a cold
+ * fetch over 8 seconds. Past that, stop stretching Sheets. The next system
+ * is Postgres, with the sheet as an import source only — not the live read.
  *
- * Specialty list: SPECIALTIES is the initial dropdown. Values that appear
- * in the sheet but are not in that list are added automatically, so the
- * filter can grow without a code change. Known typos are mapped in ALIASES.
+ * ZIP_CENTROIDS is an approximate, incomplete Northwest table, not a geocoder.
+ * SPECIALTIES is the initial dropdown. Values in the sheet that are not in
+ * that list are added automatically. Known typos are mapped in ALIASES.
  */
 
 export const SHEET_ID = "1ozYyjSQgc3jYDwvYpu-LT1kmcuZ_IvzC82lyKWiKd4E";
 
-/** Paste the deployed Apps Script /exec URL here when you have one. */
-export const DIRECTORY_SCRIPT_URL = "";
-
 export const SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+
+/** Cards rendered at a time. The rest stay in memory until "Load more". */
+export const PAGE_SIZE = 40;
+
+/** In-memory cache of the parsed sheet. Not a substitute for route staleTime. */
+export const CACHE_TTL_MS = 10 * 60 * 1000;
+
+/** Operating ceiling. Google can store more; this design should not. */
+export const MAX_PUBLISHED_ROWS = 5000;
+export const MAX_CSV_BYTES = 5 * 1024 * 1024;
+export const FETCH_TIMEOUT_MS = 8000;
 
 /** Initial controlled vocabulary. New sheet values still show up in the filter. */
 export const SPECIALTIES = [
@@ -57,7 +65,7 @@ export type Provider = {
   shortBio: string;
 };
 
-/** Approximate centroids for Northwest ZIP search. Not a full geocoder. */
+/** Approximate, incomplete centroids for Northwest ZIP search. Not a geocoder. */
 export const ZIP_CENTROIDS: Record<string, { lat: number; lng: number }> = {
   "97003": { lat: 45.547, lng: -122.964 },
   "97005": { lat: 45.487, lng: -122.81 },
@@ -203,7 +211,7 @@ function coord(value: unknown): number | null {
 
 export function providerFromRecord(record: Record<string, unknown>): Provider | null {
   const status = cell(record.status).toLowerCase();
-  if (status && status !== "published") return null;
+  if (status !== "published") return null;
   const displayName = cell(record.display_name);
   if (!displayName) return null;
   const id = cell(record.id) || displayName.toLowerCase().replace(/[^a-z0-9]+/g, "-");

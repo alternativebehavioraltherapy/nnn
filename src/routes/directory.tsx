@@ -1,21 +1,21 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, PageShell } from "@/components/page-shell";
 import {
+  PAGE_SIZE,
   ZIP_CENTROIDS,
   displaySpecialty,
   formatMiles,
   haversineMiles,
   locationLine,
   matchesSpecialty,
-  specialtyChoices,
   websiteHref,
   type Provider,
 } from "@/data/directory";
-import { loadDirectory } from "@/lib/directory.functions";
+import { loadDirectory, type DirectoryPayload } from "@/lib/directory.functions";
 
 export const Route = createFileRoute("/directory")({
-  loader: () => loadDirectory(),
+  loader: () => loadDirectory({ data: { preview: true } }),
   staleTime: 0,
   head: () => ({
     meta: [{ title: "Directory (beta) — Northwest Neurofeedback Networking" }],
@@ -23,6 +23,9 @@ export const Route = createFileRoute("/directory")({
   errorComponent: DirectoryError,
   component: DirectoryPage,
 });
+
+const CEILING_NOTICE =
+  "This directory is past the Google Sheet operating limit and needs a database before it grows further.";
 
 function DirectoryError({ error }: { error: unknown }) {
   const message = error instanceof Error ? error.message : "The directory could not be loaded.";
@@ -39,18 +42,61 @@ function DirectoryError({ error }: { error: unknown }) {
 const DISCLAIMER =
   "Beta directory. Listings come from a shared sheet and update when a published row changes. This is a networking list, not a clinic, and not a complete roster or a recommendation.";
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 102.4) / 10} KB`;
+  return `${Math.round(bytes / (1024 * 102.4)) / 10} MB`;
+}
+
 function DirectoryPage() {
   const initial = Route.useLoaderData();
-  const [providers, setProviders] = useState<Provider[]>(initial);
+  const [providers, setProviders] = useState<Provider[]>(initial.providers);
+  const [publishedCount, setPublishedCount] = useState(initial.publishedCount);
+  const [payloadBytes, setPayloadBytes] = useState(initial.payloadBytes);
+  const [overCeiling, setOverCeiling] = useState(initial.overCeiling);
+  const [ceilingReasons, setCeilingReasons] = useState(initial.ceilingReasons);
+  const [specialties, setSpecialties] = useState(initial.specialties);
+  const [complete, setComplete] = useState(initial.publishedCount <= initial.providers.length);
   const [specialty, setSpecialty] = useState("");
   const [zip, setZip] = useState("");
+  const [shown, setShown] = useState(PAGE_SIZE);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState("");
 
-  const choices = useMemo(() => specialtyChoices(providers), [providers]);
+  function applyPayload(payload: DirectoryPayload, isComplete: boolean) {
+    setProviders(payload.providers);
+    setPublishedCount(payload.publishedCount);
+    setPayloadBytes(payload.payloadBytes);
+    setOverCeiling(payload.overCeiling);
+    setCeilingReasons(payload.ceilingReasons);
+    setSpecialties(payload.specialties);
+    setComplete(isComplete);
+  }
+
+  useEffect(() => {
+    if (complete) return;
+    let cancel = false;
+    loadDirectory()
+      .then((payload) => {
+        if (!cancel) applyPayload(payload, true);
+      })
+      .catch((error: unknown) => {
+        if (!cancel) {
+          setRefreshError(error instanceof Error ? error.message : "Could not load the full directory.");
+        }
+      });
+    return () => {
+      cancel = true;
+    };
+  }, [complete]);
+
   const zipCode = zip.replace(/\D/g, "").slice(0, 5);
   const origin = zipCode.length === 5 ? ZIP_CENTROIDS[zipCode] : undefined;
   const zipMiss = zipCode.length === 5 && !origin;
+
+  useEffect(() => {
+    setShown(PAGE_SIZE);
+  }, [specialty, zipCode]);
 
   const visible = useMemo(() => {
     const matched = providers.filter((provider) => matchesSpecialty(provider, specialty));
@@ -77,11 +123,15 @@ function DirectoryPage() {
       });
   }, [providers, specialty, origin]);
 
+  const page = visible.slice(0, shown);
+
   async function reload() {
     setRefreshing(true);
     setRefreshError("");
     try {
-      setProviders(await loadDirectory());
+      const payload = await loadDirectory({ data: { refresh: true } });
+      applyPayload(payload, true);
+      setShown(PAGE_SIZE);
     } catch (error) {
       setRefreshError(error instanceof Error ? error.message : "Could not reload the directory.");
     } finally {
@@ -93,6 +143,13 @@ function DirectoryPage() {
     <PageShell>
       <PageHeader eyebrow="Beta" title="Provider directory" deck={DISCLAIMER} />
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+        {overCeiling ? (
+          <p className="mb-4 rounded-lg border border-navy bg-cream px-4 py-3 text-sm text-navy">
+            {CEILING_NOTICE}
+            {ceilingReasons.length ? ` ${ceilingReasons.join("; ")}.` : null}
+          </p>
+        ) : null}
+
         <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto]">
           <label className="block text-sm text-muted">
             Specialty
@@ -102,7 +159,7 @@ function DirectoryPage() {
               className="mt-1 w-full rounded-md border border-line bg-paper px-3 py-2.5 text-base text-ink"
             >
               <option value="">All specialties</option>
-              {choices.map((choice) => (
+              {specialties.map((choice) => (
                 <option key={choice} value={choice}>
                   {choice}
                 </option>
@@ -135,7 +192,7 @@ function DirectoryPage() {
 
         <p className="mt-3 text-sm text-muted">
           {origin
-            ? `Sorted by approximate distance from ${zipCode}. ZIP centers are rough, and a missing map point stays at the end.`
+            ? `Sorted by approximate distance from ${zipCode}. ZIP centers are rough and incomplete, and a missing map point stays at the end.`
             : zipMiss
               ? `${zipCode} is not in the local ZIP table yet, so the list stays alphabetical.`
               : "Enter a Northwest ZIP to sort by approximate distance. Otherwise the list is alphabetical."}
@@ -143,22 +200,37 @@ function DirectoryPage() {
         {refreshError ? <p className="mt-2 text-sm text-navy">{refreshError}</p> : null}
 
         <p className="mt-6 text-sm text-muted">
-          {visible.length} published {visible.length === 1 ? "listing" : "listings"}
+          {complete
+            ? `${visible.length} published ${visible.length === 1 ? "listing" : "listings"}`
+            : `Showing the first ${page.length} of ${publishedCount} published listings`}
+          {publishedCount === 0 ? ` The sheet returned 0 published rows (about ${formatBytes(payloadBytes)}).` : null}
         </p>
 
         {visible.length === 0 ? (
           <p className="mt-4 rounded-lg border border-line bg-paper p-5 text-ink">
-            No published listings match that specialty.
+            {specialty
+              ? "No published listings match that specialty."
+              : "No published listings."}
           </p>
         ) : (
           <ul className="mt-4 space-y-4">
-            {visible.map(({ provider, miles }) => (
+            {page.map(({ provider, miles }) => (
               <li key={provider.id}>
                 <ProviderCard provider={provider} miles={miles} />
               </li>
             ))}
           </ul>
         )}
+
+        {shown < visible.length ? (
+          <button
+            type="button"
+            onClick={() => setShown((count) => count + PAGE_SIZE)}
+            className="mt-4 min-h-11 rounded-md border border-line bg-paper px-4 py-2.5 text-sm font-medium text-navy"
+          >
+            Load more
+          </button>
+        ) : null}
       </div>
     </PageShell>
   );

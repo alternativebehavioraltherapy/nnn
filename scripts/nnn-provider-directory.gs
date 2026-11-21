@@ -8,8 +8,9 @@
  *    Execute as: Me
  *    Who has access: Anyone
  * 4. Copy the web app URL (ends in /exec).
- * 5. Paste it into DIRECTORY_SCRIPT_URL in src/data/directory.ts.
- *    Until that constant is set, the site reads the sheet CSV export instead.
+ * 5. Do not put this web app on the site request path. The live site reads
+ *    the public CSV export and caches it. Apps Script web apps are capped at
+ *    about 30 simultaneous executions per owning user.
  *    The sheet must stay shared so anyone with the link can view.
  *
  * The script returns only rows whose status is "published".
