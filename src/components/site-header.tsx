@@ -39,7 +39,7 @@ export function SiteHeader() {
               <Link
                 key={item.to}
                 to={item.to}
-                className={`rounded-md px-2.5 py-2 text-sm no-underline transition-colors ${
+                className={`whitespace-nowrap rounded-md px-2 py-2 text-sm no-underline transition-colors ${
                   active
                     ? "bg-cream text-navy font-medium"
                     : "text-ink hover:bg-cream hover:text-navy"
@@ -47,7 +47,7 @@ export function SiteHeader() {
               >
                 {item.label}
                 {"badge" in item && item.badge ? (
-                  <span className="ml-1.5 rounded-full bg-cream px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-dark">
+                  <span className="ml-1.5 inline-flex rounded-full border border-teal/40 bg-paper px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-dark">
                     {item.badge}
                   </span>
                 ) : null}
@@ -84,7 +84,7 @@ export function SiteHeader() {
                 >
                   {item.label}
                   {"badge" in item && item.badge ? (
-                    <span className="ml-2 rounded-full bg-cream px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-dark">
+                    <span className="ml-2 inline-flex rounded-full border border-teal/40 bg-paper px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-dark">
                       {item.badge}
                     </span>
                   ) : null}

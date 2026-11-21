@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdvocateRouteImport } from './routes/advocate'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as DirectoryRouteImport } from './routes/directory'
 import { Route as LecturesRouteImport } from './routes/lectures'
 import { Route as NeurofeedbackRouteImport } from './routes/neurofeedback'
 import { Route as PeopleRouteImport } from './routes/people'
@@ -37,6 +38,11 @@ const AdvocateRoute = AdvocateRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DirectoryRoute = DirectoryRouteImport.update({
+  id: '/directory',
+  path: '/directory',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LecturesRoute = LecturesRouteImport.update({
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/advocate': typeof AdvocateRoute
   '/contact': typeof ContactRoute
+  '/directory': typeof DirectoryRoute
   '/lectures': typeof LecturesRoute
   '/neurofeedback': typeof NeurofeedbackRoute
   '/people': typeof PeopleRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/advocate': typeof AdvocateRoute
   '/contact': typeof ContactRoute
+  '/directory': typeof DirectoryRoute
   '/lectures': typeof LecturesRoute
   '/neurofeedback': typeof NeurofeedbackRoute
   '/people': typeof PeopleRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/advocate': typeof AdvocateRoute
   '/contact': typeof ContactRoute
+  '/directory': typeof DirectoryRoute
   '/lectures': typeof LecturesRoute
   '/neurofeedback': typeof NeurofeedbackRoute
   '/people': typeof PeopleRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/advocate'
     | '/contact'
+    | '/directory'
     | '/lectures'
     | '/neurofeedback'
     | '/people'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/advocate'
     | '/contact'
+    | '/directory'
     | '/lectures'
     | '/neurofeedback'
     | '/people'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/advocate'
     | '/contact'
+    | '/directory'
     | '/lectures'
     | '/neurofeedback'
     | '/people'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AdvocateRoute: typeof AdvocateRoute
   ContactRoute: typeof ContactRoute
+  DirectoryRoute: typeof DirectoryRoute
   LecturesRoute: typeof LecturesRoute
   NeurofeedbackRoute: typeof NeurofeedbackRoute
   PeopleRoute: typeof PeopleRoute
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/directory': {
+      id: '/directory'
+      path: '/directory'
+      fullPath: '/directory'
+      preLoaderRoute: typeof DirectoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lectures': {
@@ -220,6 +240,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AdvocateRoute: AdvocateRoute,
   ContactRoute: ContactRoute,
+  DirectoryRoute: DirectoryRoute,
   LecturesRoute: LecturesRoute,
   NeurofeedbackRoute: NeurofeedbackRoute,
   PeopleRoute: PeopleRoute,
