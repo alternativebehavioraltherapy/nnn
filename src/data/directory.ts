@@ -2,13 +2,17 @@
  * Provider directory source. The live read is the public Google Sheet CSV.
  * Apps Script is not on the request path.
  *
+ * No lat/lng. Distance is ZIP centroid to ZIP centroid. The sheet may still
+ * contain lat/lng columns; they are ignored.
+ *
  * Hard stop for this design: 5,000 published rows, a 5 MB CSV, or a cold
  * fetch over 8 seconds. Past that, stop stretching Sheets. The next system
  * is Postgres, with the sheet as an import source only — not the live read.
  *
- * ZIP_CENTROIDS is an approximate, incomplete Northwest table, not a geocoder.
- * SPECIALTIES is the initial dropdown. Values in the sheet that are not in
- * that list are added automatically. Known typos are mapped in ALIASES.
+ * ZIP_CENTROIDS is an approximate Northwest table (OR, WA, ID, and the nearby
+ * border), not a geocoder and not a street address. A ZIP outside that region
+ * does not sort. SPECIALTIES is the initial dropdown. Values in the sheet that
+ * are not in that list are added automatically. Known typos are mapped in ALIASES.
  */
 
 export const SHEET_ID = "1ozYyjSQgc3jYDwvYpu-LT1kmcuZ_IvzC82lyKWiKd4E";
@@ -55,8 +59,6 @@ export type Provider = {
   city: string;
   state: string;
   zip: string;
-  lat: number | null;
-  lng: number | null;
   address: string;
   phone: string;
   email: string;
@@ -65,75 +67,8 @@ export type Provider = {
   shortBio: string;
 };
 
-/** Approximate, incomplete centroids for Northwest ZIP search. Not a geocoder. */
-export const ZIP_CENTROIDS: Record<string, { lat: number; lng: number }> = {
-  "97003": { lat: 45.547, lng: -122.964 },
-  "97005": { lat: 45.487, lng: -122.81 },
-  "97006": { lat: 45.531, lng: -122.829 },
-  "97007": { lat: 45.452, lng: -122.858 },
-  "97008": { lat: 45.456, lng: -122.8 },
-  "97015": { lat: 45.432, lng: -122.641 },
-  "97027": { lat: 45.366, lng: -122.612 },
-  "97030": { lat: 45.505, lng: -122.431 },
-  "97034": { lat: 45.412, lng: -122.7 },
-  "97035": { lat: 45.42, lng: -122.72 },
-  "97045": { lat: 45.357, lng: -122.607 },
-  "97062": { lat: 45.384, lng: -122.764 },
-  "97068": { lat: 45.358, lng: -122.661 },
-  "97070": { lat: 45.381, lng: -122.605 },
-  "97080": { lat: 45.498, lng: -122.431 },
-  "97086": { lat: 45.44, lng: -122.564 },
-  "97123": { lat: 45.522, lng: -122.989 },
-  "97124": { lat: 45.505, lng: -122.896 },
-  "97132": { lat: 45.3, lng: -122.973 },
-  "97140": { lat: 45.356, lng: -122.84 },
-  "97201": { lat: 45.508, lng: -122.689 },
-  "97202": { lat: 45.484, lng: -122.639 },
-  "97203": { lat: 45.605, lng: -122.743 },
-  "97204": { lat: 45.518, lng: -122.676 },
-  "97205": { lat: 45.522, lng: -122.691 },
-  "97206": { lat: 45.482, lng: -122.596 },
-  "97209": { lat: 45.529, lng: -122.685 },
-  "97210": { lat: 45.532, lng: -122.706 },
-  "97211": { lat: 45.568, lng: -122.642 },
-  "97212": { lat: 45.542, lng: -122.643 },
-  "97213": { lat: 45.537, lng: -122.599 },
-  "97214": { lat: 45.513, lng: -122.644 },
-  "97215": { lat: 45.516, lng: -122.602 },
-  "97216": { lat: 45.513, lng: -122.564 },
-  "97217": { lat: 45.573, lng: -122.688 },
-  "97218": { lat: 45.576, lng: -122.611 },
-  "97219": { lat: 45.447, lng: -122.706 },
-  "97220": { lat: 45.554, lng: -122.562 },
-  "97221": { lat: 45.496, lng: -122.736 },
-  "97222": { lat: 45.446, lng: -122.639 },
-  "97223": { lat: 45.438, lng: -122.77 },
-  "97224": { lat: 45.394, lng: -122.764 },
-  "97225": { lat: 45.498, lng: -122.766 },
-  "97227": { lat: 45.544, lng: -122.675 },
-  "97229": { lat: 45.556, lng: -122.808 },
-  "97230": { lat: 45.545, lng: -122.507 },
-  "97232": { lat: 45.526, lng: -122.65 },
-  "97233": { lat: 45.515, lng: -122.493 },
-  "97236": { lat: 45.476, lng: -122.51 },
-  "97239": { lat: 45.485, lng: -122.694 },
-  "97266": { lat: 45.482, lng: -122.558 },
-  "98604": { lat: 45.781, lng: -122.534 },
-  "98607": { lat: 45.587, lng: -122.402 },
-  "98642": { lat: 45.815, lng: -122.743 },
-  "98660": { lat: 45.639, lng: -122.661 },
-  "98661": { lat: 45.628, lng: -122.65 },
-  "98662": { lat: 45.652, lng: -122.57 },
-  "98663": { lat: 45.675, lng: -122.671 },
-  "98664": { lat: 45.62, lng: -122.58 },
-  "98665": { lat: 45.68, lng: -122.66 },
-  "98671": { lat: 45.58, lng: -122.353 },
-  "98682": { lat: 45.67, lng: -122.52 },
-  "98683": { lat: 45.61, lng: -122.51 },
-  "98684": { lat: 45.61, lng: -122.55 },
-  "98685": { lat: 45.7, lng: -122.67 },
-  "98686": { lat: 45.72, lng: -122.65 },
-};
+/** Approximate ZIP centers. See zip-centroids.ts. Not a street address. */
+export { ZIP_CENTROIDS } from "@/data/zip-centroids";
 
 export function canonSpecialty(value: string): string {
   const key = value.trim().toLowerCase().replace(/\s+/g, " ");
@@ -202,11 +137,8 @@ function cell(value: unknown): string {
   return String(value).trim();
 }
 
-function coord(value: unknown): number | null {
-  const text = cell(value);
-  if (!text || text === "—" || text === "-") return null;
-  const n = Number(text);
-  return Number.isFinite(n) ? n : null;
+export function zipDigits(value: string): string {
+  return value.replace(/\D/g, "").slice(0, 5);
 }
 
 export function providerFromRecord(record: Record<string, unknown>): Provider | null {
@@ -222,9 +154,7 @@ export function providerFromRecord(record: Record<string, unknown>): Provider | 
     business: cell(record.business),
     city: cell(record.city),
     state: cell(record.state),
-    zip: cell(record.zip),
-    lat: coord(record.lat),
-    lng: coord(record.lng),
+    zip: zipDigits(cell(record.zip)),
     address: cell(record.address),
     phone: cell(record.phone),
     email: cell(record.email),

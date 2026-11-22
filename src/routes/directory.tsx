@@ -10,6 +10,7 @@ import {
   locationLine,
   matchesSpecialty,
   websiteHref,
+  zipDigits,
   type Provider,
 } from "@/data/directory";
 import { loadDirectory, type DirectoryPayload } from "@/lib/directory.functions";
@@ -90,7 +91,7 @@ function DirectoryPage() {
     };
   }, [complete]);
 
-  const zipCode = zip.replace(/\D/g, "").slice(0, 5);
+  const zipCode = zipDigits(zip);
   const origin = zipCode.length === 5 ? ZIP_CENTROIDS[zipCode] : undefined;
   const zipMiss = zipCode.length === 5 && !origin;
 
@@ -107,10 +108,10 @@ function DirectoryPage() {
     }
     return matched
       .map((provider) => {
-        const miles =
-          provider.lat != null && provider.lng != null
-            ? haversineMiles(origin.lat, origin.lng, provider.lat, provider.lng)
-            : null;
+        const place = provider.zip ? ZIP_CENTROIDS[provider.zip] : undefined;
+        const miles = place
+          ? haversineMiles(origin.lat, origin.lng, place.lat, place.lng)
+          : null;
         return { provider, miles };
       })
       .sort((a, b) => {
@@ -192,10 +193,10 @@ function DirectoryPage() {
 
         <p className="mt-3 text-sm text-muted">
           {origin
-            ? `Sorted by approximate distance from ${zipCode}. ZIP centers are rough and incomplete, and a missing map point stays at the end.`
+            ? `Sorted by approximate distance from ${zipCode}. Distances are between ZIP centers, not street addresses. A listing with no ZIP stays at the end.`
             : zipMiss
-              ? `${zipCode} is not in the local ZIP table yet, so the list stays alphabetical.`
-              : "Enter a Northwest ZIP to sort by approximate distance. Otherwise the list is alphabetical."}
+              ? `${zipCode} is outside the Oregon, Washington, and Idaho ZIP table, so the list stays alphabetical.`
+              : "Enter a Northwest ZIP to sort by approximate distance between ZIP centers. Otherwise the list is alphabetical."}
         </p>
         {refreshError ? <p className="mt-2 text-sm text-navy">{refreshError}</p> : null}
 
