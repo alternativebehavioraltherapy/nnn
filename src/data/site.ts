@@ -81,7 +81,7 @@ export const CIVIC_LINKS = [
 ] as const;
 
 export type PersonCard = {
-  id: "kaiser" | "moore" | "ward" | "hardman_woung" | "stewart";
+  id: "kaiser" | "moore" | "ward" | "hardman_woung" | "stewart" | "stachera";
   name: string;
   credentials?: string;
   role: string;
@@ -266,6 +266,43 @@ export const PEOPLE: PersonCard[] = [
       },
     ],
   },
+  {
+    id: "stachera",
+    name: "Crystal Stachera",
+    credentials: "LMFT, BCN-L",
+    role: "Lead Therapist",
+    practice: "Higher Ground Counseling",
+    city: "Beaverton, Oregon",
+    photo: {
+      src: peopleSrc("crystal-stachera.jpg"),
+      alt: "Portrait of Crystal Stachera",
+      focus: "object-center",
+    },
+    logos: [
+      {
+        src: peopleSrc("higher-ground.png"),
+        alt: "Higher Ground Counseling, established 2016",
+        banner: true,
+      },
+    ],
+    lines: [
+      "Lead Therapist at Higher Ground Counseling.",
+      "Works with anxiety, depression, and complex trauma, across ages. Neurofeedback is offered as an intervention within therapy.",
+      "Practice methods include amplitude training, alpha-theta, synchrony, and infra-low. Christian practices can be included on request.",
+    ],
+    contactLines: [
+      "6800 SW 105th Ave, Ste 101, Beaverton, OR 97008",
+      "971-200-1966",
+      "crystal@highergroundcounseling.com",
+    ],
+    sites: [
+      {
+        slug: "higher-ground",
+        href: "https://www.highergroundcounseling.com/",
+        label: "highergroundcounseling.com",
+      },
+    ],
+  },
 ];
 
 export const PARTICIPANT_RESOURCE_LINKS = [
@@ -298,5 +335,10 @@ export const PARTICIPANT_RESOURCE_LINKS = [
     slug: "neuroflex",
     name: "NeuroFLEX General Wellness Neurofeedback / Tanya M. Stewart",
     href: "https://neuroflexneurofeed.wixsite.com/neuroflex-general-we",
+  },
+  {
+    slug: "higher-ground",
+    name: "Higher Ground Counseling / Crystal Stachera",
+    href: "https://www.highergroundcounseling.com/",
   },
 ] as const;
